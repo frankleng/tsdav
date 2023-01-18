@@ -112,12 +112,12 @@ export const fetchAddressBooks = async (params?: {
   );
 };
 
-export const fetchVCards = async (params: {
+export const fetchVCardUrls = async (params: {
   addressBook: DAVAddressBook;
   headers?: Record<string, string>;
   objectUrls?: string[];
   urlFilter?: (url: string) => boolean;
-}): Promise<DAVVCard[]> => {
+}) => {
   const { addressBook, headers, objectUrls, urlFilter } = params;
   debug(`Fetching vcards from ${addressBook?.url}`);
   const requiredFields: Array<'url'> = ['url'];
@@ -133,7 +133,7 @@ export const fetchVCards = async (params: {
     );
   }
 
-  const vcardUrls = (
+  return (
     objectUrls ??
     // fetch all objects of the calendar
     (
@@ -148,6 +148,16 @@ export const fetchVCards = async (params: {
     .map((url) => (url.startsWith('http') || !url ? url : new URL(url, addressBook.url).href))
     .filter(urlFilter ?? ((url) => url))
     .map((url) => new URL(url).pathname);
+};
+
+export const fetchVCards = async (params: {
+  addressBook: DAVAddressBook;
+  headers?: Record<string, string>;
+  objectUrls?: string[];
+  urlFilter?: (url: string) => boolean;
+}): Promise<DAVVCard[]> => {
+  const { addressBook, headers, objectUrls } = params;
+  const vcardUrls = objectUrls || (await fetchVCardUrls(params));
 
   const vCardResults =
     vcardUrls.length > 0

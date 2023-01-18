@@ -32,6 +32,7 @@ export type DAVResponse = {
   error?: { [key: string]: any };
   responsedescription?: string;
   props?: { [key: string]: { status: number; statusText: string; ok: boolean; value: any } | any };
+  headers: Response['headers'];
 };
 
 export type DAVRequest = {

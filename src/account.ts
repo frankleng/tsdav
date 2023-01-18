@@ -4,6 +4,7 @@ import getLogger from 'debug';
 import { fetchAddressBooks, fetchVCards } from './addressBook';
 import { fetchCalendarObjects, fetchCalendars } from './calendar';
 import { DAVNamespaceShort } from './consts';
+import { HomeUrlNotFound } from './errors';
 import { propfind } from './request';
 import { DAVAccount } from './types/models';
 import { urlContains } from './util/requestHelpers';
@@ -93,7 +94,7 @@ export const fetchHomeUrl = async (params: {
     );
   }
 
-  debug(`Fetch home url from ${account.principalUrl}`);
+  // debug(`Fetch home url from ${account.principalUrl}`);
   const responses = await propfind({
     url: account.principalUrl,
     props:
@@ -106,7 +107,7 @@ export const fetchHomeUrl = async (params: {
 
   const matched = responses.find((r) => urlContains(account.principalUrl, r.href));
   if (!matched || !matched.ok) {
-    throw new Error('cannot find homeUrl');
+    throw new HomeUrlNotFound(responses);
   }
 
   const result = new URL(
@@ -115,7 +116,7 @@ export const fetchHomeUrl = async (params: {
       : matched?.props?.addressbookHomeSet.href,
     account.rootUrl
   ).href;
-  debug(`Fetched home url ${result}`);
+  // debug(`Fetched home url ${result}`);
   return result;
 };
 

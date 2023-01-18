@@ -6,6 +6,7 @@ import {
   deleteVCard as rawDeleteVCard,
   fetchAddressBooks as rawFetchAddressBooks,
   fetchVCards as rawFetchVCards,
+  fetchVCardUrls as rawFetchVCardUrls,
   updateVCard as rawUpdateVCard,
 } from './addressBook';
 import {
@@ -172,6 +173,7 @@ export const createDAVClient = async (params: {
     headers: authHeaders,
   });
 
+  const fetchVCardUrls = defaultParam(rawFetchVCardUrls, { headers: authHeaders });
   const fetchVCards = defaultParam(rawFetchVCards, { headers: authHeaders });
   const createVCard = defaultParam(rawCreateVCard, { headers: authHeaders });
   const updateVCard = defaultParam(rawUpdateVCard, { headers: authHeaders });
@@ -203,6 +205,7 @@ export const createDAVClient = async (params: {
     fetchAddressBooks,
     addressBookMultiGet,
     fetchVCards,
+    fetchVCardUrls,
     createVCard,
     updateVCard,
     deleteVCard,
@@ -418,6 +421,10 @@ export class DAVClient {
     return defaultParam(rawFetchAddressBooks, { headers: this.authHeaders, account: this.account })(
       params?.[0]
     );
+  }
+
+  async fetchVCardUrls(...params: Parameters<typeof rawFetchVCardUrls>): Promise<string[]> {
+    return defaultParam(rawFetchVCardUrls, { headers: this.authHeaders })(params[0]);
   }
 
   async fetchVCards(...params: Parameters<typeof rawFetchVCards>): Promise<DAVVCard[]> {

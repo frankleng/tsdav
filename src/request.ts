@@ -18,6 +18,7 @@ type RawResponse = {
   error: { [key: string]: any };
   responsedescription: string;
   propstat: RawProp | RawProp[];
+  headers: Response['headers'];
 };
 
 export const davRequest = async (params: {
@@ -51,7 +52,7 @@ export const davRequest = async (params: {
 
   // debug('outgoing xml:');
   // debug(`${method} ${url}`);
-  // debug(
+  // console.log(
   //   `headers: ${JSON.stringify(
   //     {
   //       'Content-Type': 'text/xml;charset=UTF-8',
@@ -61,7 +62,7 @@ export const davRequest = async (params: {
   //     2
   //   )}`
   // );
-  // debug(xmlBody);
+  // console.log(xmlBody);
 
   const davResponse = await fetch(url, {
     headers: {
@@ -85,6 +86,7 @@ export const davRequest = async (params: {
   ) {
     return [
       {
+        headers: davResponse.headers,
         href: davResponse.url,
         ok: davResponse.ok,
         status: davResponse.status,
@@ -139,12 +141,14 @@ export const davRequest = async (params: {
         status: davResponse.status,
         statusText: davResponse.statusText,
         ok: davResponse.ok,
+        headers: davResponse.headers,
       };
     }
 
     const matchArr = statusRegex.exec(responseBody.status);
 
     return {
+      headers: davResponse.headers,
       raw: result,
       href: responseBody.href,
       status: matchArr?.groups ? Number.parseInt(matchArr?.groups.status, 10) : davResponse.status,

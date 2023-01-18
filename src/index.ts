@@ -22,6 +22,8 @@ export type {
 
 export { DAVClient } from './client';
 
+export { HomeUrlNotFound } from './errors';
+
 export { createDAVClient } from './client';
 export { createAccount } from './account';
 export { davRequest, propfind, createObject, updateObject, deleteObject } from './request';
@@ -54,6 +56,8 @@ export {
   createVCard,
   updateVCard,
   deleteVCard,
+  addressBookMultiGet,
+  fetchVCardUrls,
 } from './addressBook';
 
 export {
