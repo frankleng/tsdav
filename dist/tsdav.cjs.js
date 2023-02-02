@@ -163,7 +163,7 @@ const davRequest = (params) => __awaiter(void 0, void 0, void 0, function* () {
         : body;
     // debug('outgoing xml:');
     // debug(`${method} ${url}`);
-    // debug(
+    // console.log(
     //   `headers: ${JSON.stringify(
     //     {
     //       'Content-Type': 'text/xml;charset=UTF-8',
@@ -173,7 +173,7 @@ const davRequest = (params) => __awaiter(void 0, void 0, void 0, function* () {
     //     2
     //   )}`
     // );
-    // debug(xmlBody);
+    // console.log(xmlBody);
     const davResponse = yield crossFetch.fetch(url, {
         headers: Object.assign({ 'Content-Type': 'text/xml;charset=UTF-8' }, cleanupFalsy(headers)),
         body: xmlBody,
@@ -189,6 +189,7 @@ const davRequest = (params) => __awaiter(void 0, void 0, void 0, function* () {
         !parseOutgoing) {
         return [
             {
+                headers: davResponse.headers,
                 href: davResponse.url,
                 ok: davResponse.ok,
                 status: davResponse.status,
@@ -243,10 +244,12 @@ const davRequest = (params) => __awaiter(void 0, void 0, void 0, function* () {
                 status: davResponse.status,
                 statusText: davResponse.statusText,
                 ok: davResponse.ok,
+                headers: davResponse.headers,
             };
         }
         const matchArr = statusRegex.exec(responseBody.status);
         return {
+            headers: davResponse.headers,
             raw: result,
             href: responseBody.href,
             status: (matchArr === null || matchArr === void 0 ? void 0 : matchArr.groups) ? Number.parseInt(matchArr === null || matchArr === void 0 ? void 0 : matchArr.groups.status, 10) : davResponse.status,
@@ -626,7 +629,7 @@ const fetchAddressBooks = (params) => __awaiter(void 0, void 0, void 0, function
         return (Object.assign(Object.assign({}, addr), { reports: yield supportedReportSet({ collection: addr, headers }) }));
     })));
 });
-const fetchVCards = (params) => __awaiter(void 0, void 0, void 0, function* () {
+const fetchVCardUrls = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const { addressBook, headers, objectUrls, urlFilter } = params;
     debug$3(`Fetching vcards from ${addressBook === null || addressBook === void 0 ? void 0 : addressBook.url}`);
     const requiredFields = ['url'];
@@ -636,7 +639,7 @@ const fetchVCards = (params) => __awaiter(void 0, void 0, void 0, function* () {
         }
         throw new Error(`addressBook must have ${findMissingFieldNames(addressBook, requiredFields)} before fetchVCards`);
     }
-    const vcardUrls = (objectUrls !== null && objectUrls !== void 0 ? objectUrls : 
+    return (objectUrls !== null && objectUrls !== void 0 ? objectUrls : 
     // fetch all objects of the calendar
     (yield addressBookQuery({
         url: addressBook.url,
@@ -647,6 +650,10 @@ const fetchVCards = (params) => __awaiter(void 0, void 0, void 0, function* () {
         .map((url) => (url.startsWith('http') || !url ? url : new URL(url, addressBook.url).href))
         .filter(urlFilter !== null && urlFilter !== void 0 ? urlFilter : ((url) => url))
         .map((url) => new URL(url).pathname);
+});
+const fetchVCards = (params) => __awaiter(void 0, void 0, void 0, function* () {
+    const { addressBook, headers, objectUrls } = params;
+    const vcardUrls = objectUrls || (yield fetchVCardUrls(params));
     const vCardResults = vcardUrls.length > 0
         ? yield addressBookMultiGet({
             url: addressBook.url,
@@ -699,6 +706,7 @@ var addressBook = /*#__PURE__*/Object.freeze({
     addressBookQuery: addressBookQuery,
     addressBookMultiGet: addressBookMultiGet,
     fetchAddressBooks: fetchAddressBooks,
+    fetchVCardUrls: fetchVCardUrls,
     fetchVCards: fetchVCards,
     createVCard: createVCard,
     updateVCard: updateVCard,
@@ -1085,6 +1093,20 @@ var calendar = /*#__PURE__*/Object.freeze({
     freeBusyQuery: freeBusyQuery
 });
 
+class DavResponseError extends Error {
+    constructor(responses, msg) {
+        const [response] = responses.filter((r) => r.status > 299);
+        super([msg, response === null || response === void 0 ? void 0 : response.statusText].filter(Boolean).join(' - ') || 'Unknown error');
+        this.responses = responses;
+        this.response = response;
+    }
+}
+class HomeUrlNotFound extends DavResponseError {
+    constructor(responses) {
+        super(responses, 'Could not find homeUrl - possible server throttling.');
+    }
+}
+
 const debug$1 = getLogger__default["default"]('tsdav:account');
 const serviceDiscovery = (params) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -1150,7 +1172,7 @@ const fetchHomeUrl = (params) => __awaiter(void 0, void 0, void 0, function* () 
     if (!hasFields(account, requiredFields)) {
         throw new Error(`account must have ${findMissingFieldNames(account, requiredFields)} before fetchHomeUrl`);
     }
-    debug$1(`Fetch home url from ${account.principalUrl}`);
+    // debug(`Fetch home url from ${account.principalUrl}`);
     const responses = yield propfind({
         url: account.principalUrl,
         props: account.accountType === 'caldav'
@@ -1161,12 +1183,16 @@ const fetchHomeUrl = (params) => __awaiter(void 0, void 0, void 0, function* () 
     });
     const matched = responses.find((r) => urlContains(account.principalUrl, r.href));
     if (!matched || !matched.ok) {
-        throw new Error('cannot find homeUrl');
+        const [response] = responses;
+        if (response && response.status >= 500) {
+            throw new HomeUrlNotFound(responses);
+        }
+        throw new DavResponseError(responses);
     }
     const result = new URL(account.accountType === 'caldav'
         ? (_h = matched === null || matched === void 0 ? void 0 : matched.props) === null || _h === void 0 ? void 0 : _h.calendarHomeSet.href
         : (_j = matched === null || matched === void 0 ? void 0 : matched.props) === null || _j === void 0 ? void 0 : _j.addressbookHomeSet.href, account.rootUrl).href;
-    debug$1(`Fetched home url ${result}`);
+    // debug(`Fetched home url ${result}`);
     return result;
 });
 const createAccount = (params) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1404,6 +1430,7 @@ const createDAVClient = (params) => __awaiter(void 0, void 0, void 0, function* 
         account: defaultAccount,
         headers: authHeaders,
     });
+    const fetchVCardUrls$1 = defaultParam(fetchVCardUrls, { headers: authHeaders });
     const fetchVCards$1 = defaultParam(fetchVCards, { headers: authHeaders });
     const createVCard$1 = defaultParam(createVCard, { headers: authHeaders });
     const updateVCard$1 = defaultParam(updateVCard, { headers: authHeaders });
@@ -1434,6 +1461,7 @@ const createDAVClient = (params) => __awaiter(void 0, void 0, void 0, function* 
         fetchAddressBooks: fetchAddressBooks$1,
         addressBookMultiGet: addressBookMultiGet$1,
         fetchVCards: fetchVCards$1,
+        fetchVCardUrls: fetchVCardUrls$1,
         createVCard: createVCard$1,
         updateVCard: updateVCard$1,
         deleteVCard: deleteVCard$1,
@@ -1605,6 +1633,11 @@ class DAVClient {
             return defaultParam(fetchAddressBooks, { headers: this.authHeaders, account: this.account })(params === null || params === void 0 ? void 0 : params[0]);
         });
     }
+    fetchVCardUrls(...params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return defaultParam(fetchVCardUrls, { headers: this.authHeaders })(params[0]);
+        });
+    }
     fetchVCards(...params) {
         return __awaiter(this, void 0, void 0, function* () {
             return defaultParam(fetchVCards, { headers: this.authHeaders })(params[0]);
@@ -1639,6 +1672,8 @@ var index = Object.assign(Object.assign(Object.assign(Object.assign(Object.assig
 
 exports.DAVAttributeMap = DAVAttributeMap;
 exports.DAVClient = DAVClient;
+exports.HomeUrlNotFound = HomeUrlNotFound;
+exports.addressBookMultiGet = addressBookMultiGet;
 exports.addressBookQuery = addressBookQuery;
 exports.calendarMultiGet = calendarMultiGet;
 exports.calendarQuery = calendarQuery;
@@ -1658,6 +1693,7 @@ exports.fetchAddressBooks = fetchAddressBooks;
 exports.fetchCalendarObjects = fetchCalendarObjects;
 exports.fetchCalendars = fetchCalendars;
 exports.fetchOauthTokens = fetchOauthTokens;
+exports.fetchVCardUrls = fetchVCardUrls;
 exports.fetchVCards = fetchVCards;
 exports.freeBusyQuery = freeBusyQuery;
 exports.getBasicAuthHeaders = getBasicAuthHeaders;

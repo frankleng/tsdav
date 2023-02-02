@@ -22,6 +22,7 @@ declare type DAVResponse = {
             value: any;
         } | any;
     };
+    headers: Response['headers'];
 };
 declare type DAVRequest = {
     headers?: Record<string, string>;
@@ -187,6 +188,12 @@ declare const fetchAddressBooks: (params?: {
     props?: ElementCompact;
     headers?: Record<string, string>;
 }) => Promise<DAVAddressBook[]>;
+declare const fetchVCardUrls: (params: {
+    addressBook: DAVAddressBook;
+    headers?: Record<string, string> | undefined;
+    objectUrls?: string[] | undefined;
+    urlFilter?: ((url: string) => boolean) | undefined;
+}) => Promise<string[]>;
 declare const fetchVCards: (params: {
     addressBook: DAVAddressBook;
     headers?: Record<string, string> | undefined;
@@ -494,6 +501,12 @@ declare const createDAVClient: (params: {
         objectUrls?: string[] | undefined;
         urlFilter?: ((url: string) => boolean) | undefined;
     }) => Promise<DAVObject[]>;
+    fetchVCardUrls: (params: {
+        addressBook: DAVCollection;
+        headers?: Record<string, string> | undefined;
+        objectUrls?: string[] | undefined;
+        urlFilter?: ((url: string) => boolean) | undefined;
+    }) => Promise<string[]>;
     createVCard: (params: {
         addressBook: DAVCollection;
         vCardString: string;
@@ -560,10 +573,20 @@ declare class DAVClient {
     addressBookQuery(...params: Parameters<typeof addressBookQuery>): Promise<DAVResponse[]>;
     addressBookMultiGet(...params: Parameters<typeof addressBookMultiGet>): Promise<DAVResponse[]>;
     fetchAddressBooks(...params: Parameters<typeof fetchAddressBooks>): Promise<DAVAddressBook[]>;
+    fetchVCardUrls(...params: Parameters<typeof fetchVCardUrls>): Promise<string[]>;
     fetchVCards(...params: Parameters<typeof fetchVCards>): Promise<DAVVCard[]>;
     createVCard(...params: Parameters<typeof createVCard>): Promise<Response>;
     updateVCard(...params: Parameters<typeof updateVCard>): Promise<Response>;
     deleteVCard(...params: Parameters<typeof deleteVCard>): Promise<Response>;
+}
+
+declare class DavResponseError extends Error {
+    responses: DAVResponse[];
+    response?: DAVResponse;
+    constructor(responses: DAVResponse[], msg?: string);
+}
+declare class HomeUrlNotFound extends DavResponseError {
+    constructor(responses: DAVResponse[]);
 }
 
 declare const createAccount: (params: {
@@ -700,6 +723,12 @@ declare const _default: {
         props?: xml_js.ElementCompact | undefined;
         headers?: Record<string, string> | undefined;
     } | undefined) => Promise<DAVCollection[]>;
+    fetchVCardUrls: (params: {
+        addressBook: DAVCollection;
+        headers?: Record<string, string> | undefined;
+        objectUrls?: string[] | undefined;
+        urlFilter?: ((url: string) => boolean) | undefined;
+    }) => Promise<string[]>;
     fetchVCards: (params: {
         addressBook: DAVCollection;
         headers?: Record<string, string> | undefined;
@@ -950,6 +979,12 @@ declare const _default: {
             objectUrls?: string[] | undefined;
             urlFilter?: ((url: string) => boolean) | undefined;
         }) => Promise<DAVObject[]>;
+        fetchVCardUrls: (params: {
+            addressBook: DAVCollection;
+            headers?: Record<string, string> | undefined;
+            objectUrls?: string[] | undefined;
+            urlFilter?: ((url: string) => boolean) | undefined;
+        }) => Promise<string[]>;
         createVCard: (params: {
             addressBook: DAVCollection;
             vCardString: string;
@@ -977,4 +1012,4 @@ declare const _default: {
     };
 };
 
-export { DAVAccount, DAVAddressBook, DAVAttributeMap, DAVCalendar, DAVCalendarObject, DAVClient, DAVCollection, DAVCredentials, DAVDepth, DAVMethods, DAVNamespace, DAVNamespaceShort, DAVObject, DAVRequest, DAVResponse, DAVTokens, DAVVCard, addressBookQuery, calendarMultiGet, calendarQuery, cleanupFalsy, collectionQuery, createAccount, createCalendarObject, createDAVClient, createObject, createVCard, davRequest, _default as default, deleteCalendarObject, deleteObject, deleteVCard, fetchAddressBooks, fetchCalendarObjects, fetchCalendars, fetchOauthTokens, fetchVCards, freeBusyQuery, getBasicAuthHeaders, getDAVAttribute, getOauthHeaders, isCollectionDirty, makeCalendar, propfind, refreshAccessToken, smartCollectionSync, supportedReportSet, syncCalendars, syncCollection, updateCalendarObject, updateObject, updateVCard, urlContains, urlEquals };
+export { DAVAccount, DAVAddressBook, DAVAttributeMap, DAVCalendar, DAVCalendarObject, DAVClient, DAVCollection, DAVCredentials, DAVDepth, DAVMethods, DAVNamespace, DAVNamespaceShort, DAVObject, DAVRequest, DAVResponse, DAVTokens, DAVVCard, HomeUrlNotFound, addressBookMultiGet, addressBookQuery, calendarMultiGet, calendarQuery, cleanupFalsy, collectionQuery, createAccount, createCalendarObject, createDAVClient, createObject, createVCard, davRequest, _default as default, deleteCalendarObject, deleteObject, deleteVCard, fetchAddressBooks, fetchCalendarObjects, fetchCalendars, fetchOauthTokens, fetchVCardUrls, fetchVCards, freeBusyQuery, getBasicAuthHeaders, getDAVAttribute, getOauthHeaders, isCollectionDirty, makeCalendar, propfind, refreshAccessToken, smartCollectionSync, supportedReportSet, syncCalendars, syncCollection, updateCalendarObject, updateObject, updateVCard, urlContains, urlEquals };

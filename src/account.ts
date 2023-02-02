@@ -4,7 +4,7 @@ import getLogger from 'debug';
 import { fetchAddressBooks, fetchVCards } from './addressBook';
 import { fetchCalendarObjects, fetchCalendars } from './calendar';
 import { DAVNamespaceShort } from './consts';
-import { HomeUrlNotFound } from './errors';
+import { DavResponseError, HomeUrlNotFound } from './errors';
 import { propfind } from './request';
 import { DAVAccount } from './types/models';
 import { urlContains } from './util/requestHelpers';
@@ -107,7 +107,11 @@ export const fetchHomeUrl = async (params: {
 
   const matched = responses.find((r) => urlContains(account.principalUrl, r.href));
   if (!matched || !matched.ok) {
-    throw new HomeUrlNotFound(responses);
+    const [response] = responses;
+    if (response && response.status >= 500) {
+      throw new HomeUrlNotFound(responses);
+    }
+    throw new DavResponseError(responses);
   }
 
   const result = new URL(
